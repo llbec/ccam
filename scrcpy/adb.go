@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -15,7 +16,15 @@ import (
 func adbDevice() []string {
 	var list []string
 	ret := adbRun("", "devices")
+	//fmt.Println(ret)
 	if len(ret) != 0 {
+		reg, err := regexp.Compile("([\\S]+)[\\s]+device\\b")
+		if err == nil {
+			list = reg.FindAllString(ret, -1)
+		}
+	}
+	for i, v := range list {
+		list[i] = strings.Fields(strings.TrimSpace(v))[0]
 	}
 	return list
 }

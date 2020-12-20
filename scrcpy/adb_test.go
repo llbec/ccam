@@ -1,8 +1,13 @@
 package scrcpy
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
-func Test_adbExec(t *testing.T) {
+func Test_adbDevice(t *testing.T) {
 	//adbExec("", "devices")
-	adbRun("", "devices")
+	//adbRun("", "devices")
+	list := adbDevice()
+	fmt.Printf("%v", list)
 }
