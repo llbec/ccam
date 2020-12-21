@@ -10,7 +10,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"syscall"
 )
 
 func adbDevice() []string {
@@ -88,7 +87,7 @@ func adbRun(serial string, params ...string) string {
 	}
 	if debugOpt.Debug() {
 		log.Printf("PID %v\n", cmd.ProcessState.Pid())
-		log.Printf("ExitCode %v\n", cmd.ProcessState.Sys().(syscall.WaitStatus).ExitCode)
+		//log.Printf("ExitCode %v\n", cmd.ProcessState.Sys().(syscall.WaitStatus).ExitCode)
 		log.Printf(outinfo.String())
 	}
 	return outinfo.String()
