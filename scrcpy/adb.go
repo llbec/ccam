@@ -3,29 +3,21 @@ package scrcpy
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
-	"regexp"
 	"runtime"
 	"strings"
 	"sync"
 )
 
-func adbDevice() []string {
-	var list []string
-	ret := adbRun("", "devices")
-	//fmt.Println(ret)
-	if len(ret) != 0 {
-		reg, err := regexp.Compile("([\\S]+)[\\s]+device\\b")
-		if err == nil {
-			list = reg.FindAllString(ret, -1)
-		}
-	}
-	for i, v := range list {
-		list[i] = strings.Fields(strings.TrimSpace(v))[0]
-	}
-	return list
+func adbTCPMod(serial string, port int) error {
+	return adbExec(serial, "tcpip", fmt.Sprintf("%d", port))
+}
+
+func adbUSBMod(serial string) error {
+	return adbExec(serial, "usb")
 }
 
 func adbPush(serial, local, remote string) error {
@@ -73,24 +65,58 @@ func adbRun(serial string, params ...string) string {
 	if debugOpt.Debug() {
 		log.Printf("执行 %s %s\n", adbCmd, strings.Join(args, " "))
 	}
-	outinfo := bytes.Buffer{}
+
 	cmd := exec.Command(adbCmd, args...)
-	cmd.Stdout = &outinfo
+	//outinfo := bytes.Buffer{}
+	//cmd.Stdout = &outinfo
+	stdout, _ := cmd.StdoutPipe()
+
 	err := cmd.Start()
 	if err != nil {
-		fmt.Println(err.Error())
+		if debugOpt.Error() {
+			log.Printf(err.Error())
+		}
+		return ""
 	}
+
+	outinfo, _ := ioutil.ReadAll(stdout)
+	stdout.Close()
+
 	if err = cmd.Wait(); err != nil {
 		if debugOpt.Error() {
 			log.Printf(err.Error())
 		}
+		return ""
 	}
 	if debugOpt.Debug() {
 		log.Printf("PID %v\n", cmd.ProcessState.Pid())
 		//log.Printf("ExitCode %v\n", cmd.ProcessState.Sys().(syscall.WaitStatus).ExitCode)
-		log.Printf(outinfo.String())
+		//log.Printf(outinfo.String())
 	}
-	return outinfo.String()
+	return string(outinfo)
+}
+
+func adbRun1(serial string, params ...string) string {
+	args := make([]string, 0, 8)
+	if len(serial) > 0 {
+		args = append(args, "-s", serial)
+	}
+	args = append(args, params...)
+
+	adbCmdOnce.Do(getAdbCommand)
+	if debugOpt.Debug() {
+		log.Printf("执行 %s %s\n", adbCmd, strings.Join(args, " "))
+	}
+
+	cmd := exec.Command(adbCmd, args...)
+	ret, err := cmd.Output()
+	if err != nil {
+		if debugOpt.Error() {
+			log.Printf(err.Error())
+			return ""
+		}
+	}
+	return string(ret)
 }
 
 func adbExec(serial string, params ...string) error {
